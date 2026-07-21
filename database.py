@@ -1,14 +1,25 @@
 import sqlite3
 
-connection = sqlite3.connect('users.db')
-cursor = connection.cursor()
-cursor.execute('''
-    CREATE TABLE IF NOT EXISTS users(
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    telegram_id INTEGER NOT NULL,
-    message TEXT NOT NULL
-    )
-''')
+def create_table():
+    conn = sqlite3.connect('messages.db')
+    cursor = conn.cursor()
+    cursor.execute('''CREATE TABLE IF NOT EXISTS messages
+                      (id INTEGER PRIMARY KEY AUTOINCREMENT,
+                       telegram_id INTEGER,
+                       message TEXT)''')
+    conn.commit()
+    conn.close()
 
-connection.commit()
-connection.close()
+
+
+def save_message( telegram_id, user_message):
+    conn = sqlite3.connect('messages.db')
+    cursor = conn.cursor()
+    
+    cursor.execute('INSERT INTO messages (telegram_id, message) VALUES (?, ?)', (telegram_id, user_message))
+    conn.commit()
+    conn.close()
+
+
+
+
