@@ -31,4 +31,3 @@ app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, message_handler)
 
 create_table()
 app.run_polling()
-
