@@ -3,4 +3,4 @@ __pycache__/
 *.pyc
 messages.db
 *.db
-.vscode/
+.vscode/ 
