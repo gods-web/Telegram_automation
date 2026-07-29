@@ -21,27 +21,20 @@ app.add_handler(CommandHandler("start", start))
 
 async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         telegram_id = update.message.from_user.id
+        message_from = update.message.from_user.username
         user_message = update.message.text
-        save_message(telegram_id, user_message)
-        if user_message.lower() == "hello":
-            await update.message.reply_text("I'm doing great! How about you?")
-        elif user_message.lower() == "i'm fine, how about you?":
-            await update.message.reply_text("I'm glad to hear that! I'm doing well too.")
-        elif user_message.lower() == "how was your day?":
-            await update.message.reply_text("It was good, thanks for asking!")
-        else:
-            try:
+        save_message(telegram_id, message_from, user_message)
+
+        try:
                 response = client.models.generate_content(
-                model="gemini-3.5-flash-lite",
-                contents = user_message
-                )
-        
+                    model="gemini-3.5-flash-lite",
+                    contents = user_message
+                    )
+            
                 await update.message.reply_text(response.text)
-            except ServerError:
-                 await update.message.reply_text(" Germini is busy at the moment. please try again in a few seconds.")
-            except Exception as e:
-                print("Gemini Error:", repr(e))
-                await update.message.reply_text("Sorry, I couldn't generate a response.")
+        except ServerError:
+                await update.message.reply_text(" Germini is busy at the moment. please try again in a few seconds.")
+        
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, message_handler))
 
 
