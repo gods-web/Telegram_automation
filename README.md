@@ -15,7 +15,7 @@ This is a python automation project. it is a telegram bot, which help telegram u
 ## Second step: the second step is to create the the files needed.
 * bot.py
 * database.py
-* requirement.py
+* requirements.txt
 * messages.db 
 
 
