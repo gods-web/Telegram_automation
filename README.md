@@ -70,6 +70,7 @@ These files will be used throughout the project:
       filters,
    )
    from dotenv import load_dotenv
+   from google.genai import types
    from database import create_table, save_message, get_chat_history
    from google.genai.errors import ServerError
    from google import genai
