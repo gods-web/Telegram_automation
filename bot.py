@@ -1,6 +1,7 @@
 from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 from dotenv import load_dotenv
+from google.genai import types
 from telegram.ext import MessageHandler, filters
 from database import create_table, save_message
 from database import get_chat_history
@@ -27,20 +28,34 @@ app = ApplicationBuilder().token(BOT_TOKEN).build()
 app.add_handler(CommandHandler("start", start))
 
 async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-        telegram_id = update.message.from_user.id
-        message_from = update.message.from_user.username
-        user_message = update.message.text
-        save_message(
-                telegram_id,
-                message_from,
-                "text",
-                None,
-                None,
-                user_message
-            )
-        chat_history = get_chat_history(telegram_id)
-        print(chat_history)
+    telegram_id = update.message.from_user.id
+    message_from = update.message.from_user.username
+    user_message = update.message.text
 
+    save_message(
+        telegram_id,
+        message_from,
+        "text",
+        None,
+        None,
+        user_message
+    )
+
+    chat_history = get_chat_history(telegram_id)
+    print(chat_history)
+
+    try:
+        response = client.models.generate_content(
+            model="gemini-3.5-flash-lite",
+            contents=user_message
+        )
+
+        await update.message.reply_text(response.text)
+
+    except ServerError:
+        await update.message.reply_text(
+            "Gemini is busy at the moment. Please try again in a few seconds."
+        )
 async def photo_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     telegram_id = update.message.from_user.id
     message_from = update.message.from_user.username
@@ -60,7 +75,40 @@ async def photo_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         file_path,
         None
     )
-    await update.message.reply_text("Photo received and saved successfully!")
+    await update.message.reply_text("📷 Photo received. Analyzing...")
+
+    try:
+        print("Opening image...")
+
+        with open(file_path, "rb") as f:
+            image_bytes = f.read()
+
+        print("Image loaded")
+
+        image_part = types.Part.from_bytes(
+            data=image_bytes,
+            mime_type="image/jpeg",
+        )
+
+        print("Image converted")
+
+        print("Sending to Gemini...")
+
+        response = client.models.generate_content(
+            model="gemini-3.5-flash-lite",
+            contents=[image_part,"Please describe this image."
+        ]
+    )
+
+        print("Gemini finished")
+
+        await update.message.reply_text(response.text)
+
+    except Exception as e:
+        print("ERROR:", e)
+        await update.message.reply_text(
+    "An unexpected error occurred while processing the image."
+    )        
 
 async def voice_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     telegram_id = update.message.from_user.id
@@ -82,7 +130,6 @@ async def voice_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     await update.message.reply_text("Voice message received and saved successfully!")
 
-print("File downloaded")
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, message_handler))
 app.add_handler(MessageHandler(filters.PHOTO, photo_handler))
 app.add_handler(MessageHandler(filters.VOICE, voice_handler))
