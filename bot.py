@@ -50,7 +50,8 @@ async def photo_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     file_path = os.path.join(PHOTO_DIR, f"{file_id}.jpg")
     await photo_file.download_to_drive(file_path)
-
+    print("Photo received")
+    print("File downloaded")
     save_message(
         telegram_id,
         message_from,
@@ -59,21 +60,32 @@ async def photo_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         file_path,
         None
     )
+    await update.message.reply_text("Photo received and saved successfully!")
 
-    await update.message.reply_text("📷 Photo received successfully!")
-    try:
-            response = client.models.generate_content(
-                model="gemini-3.5-flash-lite",
-                )
-            
-            await update.message.reply_text(response.text)
-    except ServerError:
-            await update.message.reply_text(" Germini is busy at the moment. please try again in a few seconds.")
+async def voice_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    telegram_id = update.message.from_user.id
+    message_from = update.message.from_user.username
 
-app.add_handler(CommandHandler("start", start))
+    voice_file = await update.message.voice.get_file()
+    file_id = voice_file.file_id
+
+    file_path = os.path.join(VOICE_DIR, f"{file_id}.ogg")
+    await voice_file.download_to_drive(file_path)
+
+    save_message(
+        telegram_id,
+        message_from,
+        "voice",
+        file_id,
+        file_path,
+        None
+    )
+    await update.message.reply_text("Voice message received and saved successfully!")
+
+print("File downloaded")
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, message_handler))
 app.add_handler(MessageHandler(filters.PHOTO, photo_handler))
-        
+app.add_handler(MessageHandler(filters.VOICE, voice_handler))
 
 create_table()
 app.run_polling()
