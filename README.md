@@ -57,3 +57,20 @@ These files will be used throughout the project:
 * **database.py** – Handles all database operations.
 * **requirements.txt** – Lists the Python packages required for the project.
 * **messages.db** – SQLite database used to store chat history and other bot data.
+
+## Required import   
+ Write the following modules befor writing the bot logic
+    
+   from telegram import Update
+   from telegram.ext import (
+      ApplicationBuilder,
+      CommandHandler,
+      ContextTypes,
+      MessageHandler,
+      filters,
+   )
+   from dotenv import load_dotenv
+   from database import create_table, save_message, get_chat_history
+   from google.genai.errors import ServerError
+   from google import genai
+   import os
