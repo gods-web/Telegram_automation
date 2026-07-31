@@ -1,3 +1,6 @@
+# from multiprocessing import context
+# from turtle import update
+
 from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 from dotenv import load_dotenv
@@ -114,8 +117,8 @@ async def voice_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     telegram_id = update.message.from_user.id
     message_from = update.message.from_user.username
 
-    voice_file = await update.message.voice.get_file()
-    file_id = voice_file.file_id
+    file_id = update.message.voice.file_id
+    voice_file = await context.bot.get_file(file_id)
 
     file_path = os.path.join(VOICE_DIR, f"{file_id}.ogg")
     await voice_file.download_to_drive(file_path)
@@ -128,7 +131,48 @@ async def voice_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         file_path,
         None
     )
-    await update.message.reply_text("Voice message received and saved successfully!")
+    
+    await update.message.reply_text("analyzing response...")
+    
+    try:
+            print("analyzing voice_note...")
+    
+            with open(file_path, "rb") as f:
+                audio_bytes = f.read()
+    
+            print("Voice note loaded")
+    
+            voice_note = types.Part.from_bytes(
+                data=audio_bytes,
+                mime_type="audio/ogg",
+            )
+    
+            print("Voice note converted")
+    
+            print("Sending to Gemini...")
+    
+            response = client.models.generate_content(
+                model="gemini-3.5-flash-lite",
+                    contents=[
+                    voice_note,
+                        "Listen to this voice note and respond to what the user said."
+            ]
+            
+        )
+    
+            print("Gemini finished")
+
+            await update.message.reply_text(response.text)
+
+
+    
+    except Exception as e:
+            print("ERROR:", e)
+
+    
+            await update.message.reply_text(
+            "An unexpected error occurred while processing the voice message."
+            ) 
 
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, message_handler))
 app.add_handler(MessageHandler(filters.PHOTO, photo_handler))
