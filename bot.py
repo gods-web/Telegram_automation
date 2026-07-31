@@ -24,7 +24,7 @@ os.makedirs(VOICE_DIR, exist_ok=True)
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Hello! I am your bot. How can I assist you today?")
-    datetime = ("time_last_update_utc")
+
 
 
 app = ApplicationBuilder().token(BOT_TOKEN).build()
@@ -178,6 +178,8 @@ async def voice_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, message_handler))
 app.add_handler(MessageHandler(filters.PHOTO, photo_handler))
 app.add_handler(MessageHandler(filters.VOICE, voice_handler))
+
+
 
 create_table()
 app.run_polling()
