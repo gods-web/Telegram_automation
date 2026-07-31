@@ -1,6 +1,3 @@
-# from multiprocessing import context
-# from turtle import update
-
 from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 from dotenv import load_dotenv
@@ -27,8 +24,12 @@ os.makedirs(VOICE_DIR, exist_ok=True)
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Hello! I am your bot. How can I assist you today?")
+    datetime = ("time_last_update_utc")
+
+
 app = ApplicationBuilder().token(BOT_TOKEN).build()
 app.add_handler(CommandHandler("start", start))
+
 
 async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     telegram_id = update.message.from_user.id
