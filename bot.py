@@ -33,9 +33,10 @@ app.add_handler(CommandHandler("start", start))
 
 async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     telegram_id = update.message.from_user.id
-    message_from = update.message.from_user.username
+    message_from = "user"
     user_message = update.message.text
 
+    # Save user's message
     save_message(
         telegram_id,
         message_from,
@@ -45,16 +46,39 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         user_message
     )
 
+    # Get conversation history
     chat_history = get_chat_history(telegram_id)
-    print(chat_history)
+
+    # Build conversation
+    conversation = ""
+
+    for sender, message in chat_history:
+        conversation += f"{sender}: {message}\n"
+
+    print("===== CONVERSATION =====")
+    print(conversation)
+    print("========================")
 
     try:
         response = client.models.generate_content(
             model="gemini-3.5-flash-lite",
-            contents=user_message
+            contents=conversation
         )
 
-        await update.message.reply_text(response.text)
+        bot_response = response.text
+
+        # Send Gemini response
+        await update.message.reply_text(bot_response)
+
+        # Save Gemini response
+        save_message(
+            telegram_id,
+            "assistant",
+            "text",
+            None,
+            None,
+            bot_response
+        )
 
     except ServerError:
         await update.message.reply_text(
