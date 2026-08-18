@@ -27,7 +27,8 @@ def save_message(
     message_type="text",
     file_id=None,
     file_path=None,
-    message="user_message"
+    message=None
+
 ):
     conn = sqlite3.connect('messages.db')
     cursor = conn.cursor()
@@ -39,8 +40,14 @@ def save_message(
 def get_chat_history(telegram_id):
     conn = sqlite3.connect("messages.db")
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM messages WHERE telegram_id = ? ORDER BY created_at DESC LIMIT 10", (telegram_id,))
+    cursor.execute("""
+    SELECT message_from, message FROM messages
+    WHERE telegram_id = ? 
+    ORDER BY created_at DESC LIMIT 10""",
+    (telegram_id,)
+    )
     chat_history = cursor.fetchall()
+
     conn.close()
 
-    return chat_history
+    return chat_history[::-1]  
