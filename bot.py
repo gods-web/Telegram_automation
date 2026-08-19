@@ -36,7 +36,7 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     message_from = "user"
     user_message = update.message.text
 
-    # Save user's message
+    
     save_message(
         telegram_id,
         message_from,
@@ -46,10 +46,10 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         user_message
     )
 
-    # Get conversation history
+
     chat_history = get_chat_history(telegram_id)
 
-    # Build conversation
+
     conversation = ""
 
     for sender, message in chat_history:
@@ -67,10 +67,8 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         bot_response = response.text
 
-        # Send Gemini response
         await update.message.reply_text(bot_response)
 
-        # Save Gemini response
         save_message(
             telegram_id,
             "assistant",
@@ -104,6 +102,7 @@ async def photo_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         None
     )
     await update.message.reply_text("📷 Photo received. Analyzing...")
+    
 
     try:
         print("Opening image...")
