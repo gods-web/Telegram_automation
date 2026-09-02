@@ -1,5 +1,6 @@
-from telegram import Update
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
+from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes, CallbackQueryHandler
 from dotenv import load_dotenv
 from google.genai import types
 from telegram.ext import MessageHandler, filters
@@ -8,6 +9,8 @@ from database import get_chat_history
 from google.genai.errors import ServerError
 from google import genai
 import os
+import time
+
 
 load_dotenv()
 
@@ -16,20 +19,39 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
 client = genai.Client(api_key=GEMINI_API_KEY)
 
+BUTTON1_DIR = "downloads/button1"
 PHOTO_DIR = "downloads/photos"
 VOICE_DIR = "downloads/voice"
-
+os.makedirs(BUTTON1_DIR, exist_ok=True)
 os.makedirs(PHOTO_DIR, exist_ok=True)
 os.makedirs(VOICE_DIR, exist_ok=True)
+
+
+
+async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+        query = update.callback_query
+
+        await query.answer()
+
+        if query.data == "feedback":
+            await query.message.reply_text(
+            "Thanks for your feedback! 😊"
+        )
+            print("Feedback button clicked")
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Hello! I am your bot. How can I assist you today?")
 
-
-
 app = ApplicationBuilder().token(BOT_TOKEN).build()
-app.add_handler(CommandHandler("start", start))
 
+feedback_button = InlineKeyboardButton(
+    text="💬 Feedback",
+    callback_data="feedback"
+)
+
+inline_keyboard = InlineKeyboardMarkup([
+    [feedback_button]
+])
 
 async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     telegram_id = update.message.from_user.id
@@ -67,8 +89,11 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         bot_response = response.text
 
-        await update.message.reply_text(bot_response)
+        await update.message.reply_text(
+        bot_response,
+        reply_markup=inline_keyboard
 
+        )
         save_message(
             telegram_id,
             "assistant",
@@ -101,8 +126,9 @@ async def photo_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         file_path,
         None
     )
-    await update.message.reply_text("📷 Photo received. Analyzing...")
-    
+    status_message = await update.message.reply_text("📷 Photo received. Analyzing...")
+    time.sleep(3)
+    await status_message.delete()
 
     try:
         print("Opening image...")
@@ -156,10 +182,15 @@ async def voice_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         None
     )
     
-    await update.message.reply_text("analyzing response...")
+    status_message = await update.message.reply_text("analyzing response...")
+    time.sleep(1)
+    await status_message.delete()
+    
+    
     
     try:
             print("analyzing voice_note...")
+            
     
             with open(file_path, "rb") as f:
                 audio_bytes = f.read()
@@ -188,8 +219,6 @@ async def voice_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
             await update.message.reply_text(response.text)
 
-
-    
     except Exception as e:
             print("ERROR:", e)
 
@@ -198,11 +227,11 @@ async def voice_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "An unexpected error occurred while processing the voice message."
             ) 
 
+app.add_handler(CommandHandler("start", start))
+app.add_handler(CallbackQueryHandler(button_handler))
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, message_handler))
 app.add_handler(MessageHandler(filters.PHOTO, photo_handler))
 app.add_handler(MessageHandler(filters.VOICE, voice_handler))
-
-
 
 create_table()
 app.run_polling()
