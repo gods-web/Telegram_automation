@@ -87,6 +87,12 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             contents=conversation
         )
 
+        if "your name" in user_message.lower():
+            await update.message.reply_text(
+            "My name is Nexi AI!🤖 I am a virtual assistant designed to help you with various tasks and provide information. How can I assist you today?"
+        )
+            return
+
         bot_response = response.text
 
         await update.message.reply_text(
