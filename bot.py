@@ -1,6 +1,5 @@
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
+from telegram import ReplyKeyboardMarkup, Update
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
-from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes, CallbackQueryHandler
 from dotenv import load_dotenv
 from google.genai import types
 from telegram.ext import MessageHandler, filters
@@ -19,39 +18,28 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
 client = genai.Client(api_key=GEMINI_API_KEY)
 
-BUTTON1_DIR = "downloads/button1"
 PHOTO_DIR = "downloads/photos"
 VOICE_DIR = "downloads/voice"
-os.makedirs(BUTTON1_DIR, exist_ok=True)
 os.makedirs(PHOTO_DIR, exist_ok=True)
 os.makedirs(VOICE_DIR, exist_ok=True)
 
 
-
-async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-        query = update.callback_query
-
-        await query.answer()
-
-        if query.data == "feedback":
-            await query.message.reply_text(
-            "Thanks for your feedback! 😊"
-        )
-            print("Feedback button clicked")
-
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("Hello! I am your bot. How can I assist you today?")
+    await update.message.reply_text("Hello! I am Nexi AI \n How can I assist you today?",
+                                    reply_markup=main_keyboard
+                                    )
 
 app = ApplicationBuilder().token(BOT_TOKEN).build()
 
-feedback_button = InlineKeyboardButton(
-    text="💬 Feedback",
-    callback_data="feedback"
+main_keyboard = ReplyKeyboardMarkup(
+    [
+        ["💬 Feedback", "ℹ️ About"],
+        ["🆘 Help", "⚙️ Menu"]
+    ],
+    resize_keyboard=True,
 )
+print("Bot started successfully!")
 
-inline_keyboard = InlineKeyboardMarkup([
-    [feedback_button]
-])
 
 async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     telegram_id = update.message.from_user.id
@@ -95,11 +83,8 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         bot_response = response.text
 
-        await update.message.reply_text(
-        bot_response,
-        reply_markup=inline_keyboard
-
-        )
+        await update.message.reply_text(bot_response)
+        
         save_message(
             telegram_id,
             "assistant",
@@ -192,8 +177,6 @@ async def voice_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     time.sleep(1)
     await status_message.delete()
     
-    
-    
     try:
             print("analyzing voice_note...")
             
@@ -234,7 +217,6 @@ async def voice_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             ) 
 
 app.add_handler(CommandHandler("start", start))
-app.add_handler(CallbackQueryHandler(button_handler))
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, message_handler))
 app.add_handler(MessageHandler(filters.PHOTO, photo_handler))
 app.add_handler(MessageHandler(filters.VOICE, voice_handler))
