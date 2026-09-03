@@ -60,7 +60,8 @@ These files will be used throughout the project:
 
 ## Required import   
  Write the following modules befor writing the bot logic
-    
+
+   from telegram import ReplyKeyboardMarkup, Update   
    from telegram import Update
    from telegram.ext import (
       ApplicationBuilder,
