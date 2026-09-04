@@ -1,4 +1,4 @@
-from telegram import Update
+from telegram import ReplyKeyboardMarkup, Update
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 from dotenv import load_dotenv
 from google.genai import types
@@ -8,6 +8,8 @@ from database import get_chat_history
 from google.genai.errors import ServerError
 from google import genai
 import os
+import time
+
 
 load_dotenv()
 
@@ -18,17 +20,25 @@ client = genai.Client(api_key=GEMINI_API_KEY)
 
 PHOTO_DIR = "downloads/photos"
 VOICE_DIR = "downloads/voice"
-
 os.makedirs(PHOTO_DIR, exist_ok=True)
 os.makedirs(VOICE_DIR, exist_ok=True)
 
+
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("Hello! I am your bot. How can I assist you today?")
-
-
+    await update.message.reply_text("Hello! I am Nexi AI \n How can I assist you today?",
+                                    reply_markup=main_keyboard
+                                    )
 
 app = ApplicationBuilder().token(BOT_TOKEN).build()
-app.add_handler(CommandHandler("start", start))
+
+main_keyboard = ReplyKeyboardMarkup(
+    [
+        ["💬 Feedback", "ℹ️ About"],
+        ["🆘 Help", "⚙️ Menu"]
+    ],
+    resize_keyboard=True,
+)
+print("Bot started successfully!")
 
 
 async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -65,10 +75,16 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             contents=conversation
         )
 
+        if "your name" in user_message.lower():
+            await update.message.reply_text(
+            "My name is Nexi AI!🤖 I am a virtual assistant designed to help you with various tasks and provide information. How can I assist you today?"
+        )
+            return
+
         bot_response = response.text
 
         await update.message.reply_text(bot_response)
-
+        
         save_message(
             telegram_id,
             "assistant",
@@ -101,8 +117,9 @@ async def photo_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         file_path,
         None
     )
-    await update.message.reply_text("📷 Photo received. Analyzing...")
-    
+    status_message = await update.message.reply_text("📷 Photo received. Analyzing...")
+    time.sleep(3)
+    await status_message.delete()
 
     try:
         print("Opening image...")
@@ -156,10 +173,13 @@ async def voice_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         None
     )
     
-    await update.message.reply_text("analyzing response...")
+    status_message = await update.message.reply_text("analyzing response...")
+    time.sleep(1)
+    await status_message.delete()
     
     try:
             print("analyzing voice_note...")
+            
     
             with open(file_path, "rb") as f:
                 audio_bytes = f.read()
@@ -188,8 +208,6 @@ async def voice_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
             await update.message.reply_text(response.text)
 
-
-    
     except Exception as e:
             print("ERROR:", e)
 
@@ -198,11 +216,10 @@ async def voice_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "An unexpected error occurred while processing the voice message."
             ) 
 
+app.add_handler(CommandHandler("start", start))
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, message_handler))
 app.add_handler(MessageHandler(filters.PHOTO, photo_handler))
 app.add_handler(MessageHandler(filters.VOICE, voice_handler))
-
-
 
 create_table()
 app.run_polling()
