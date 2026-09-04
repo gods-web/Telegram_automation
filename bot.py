@@ -37,7 +37,9 @@ main_keyboard = ReplyKeyboardMarkup(
         ["🆘 Help", "⚙️ Menu"]
     ],
     resize_keyboard=True,
-)
+
+) 
+ 
 print("Bot started successfully!")
 
 
@@ -69,6 +71,28 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     print(conversation)
     print("========================")
 
+    if user_message == "💬 Feedback":
+            context.user_data["awaiting_feedback"] = True
+            await update.message.reply_text(
+                "Thank you for your feedback! Please how can you rate our service?"
+            )
+            return
+    if user_message == "👍 Good":
+        context.user_data["feedback_rating"] = "👍 Good"
+        await update.message.reply_text(
+            "Thank you for your positive feedback! We appreciate it."
+        )
+        return
+    if user_message == "👎 Bad":
+        context.user_data["feedback_rating"] = "👎 Bad"
+        await update.message.reply_text(
+            "Thank you for your feedback! We will work to improve our service."
+        )
+        return
+    # context.user_data["awaiting_feedback"] = "👍 Good"
+    # context.user_data["feedback_rating"] = "👎 Bad"
+    
+
     try:
         response = client.models.generate_content(
             model="gemini-3.5-flash-lite",
@@ -96,8 +120,9 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     except ServerError:
         await update.message.reply_text(
-            "Gemini is busy at the moment. Please try again in a few seconds."
+            "Nexi server is busy at the moment. Please try again in a few seconds."
         )
+
 async def photo_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     telegram_id = update.message.from_user.id
     message_from = update.message.from_user.username
@@ -117,6 +142,7 @@ async def photo_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         file_path,
         None
     )
+
     status_message = await update.message.reply_text("📷 Photo received. Analyzing...")
     time.sleep(3)
     await status_message.delete()
@@ -153,6 +179,8 @@ async def photo_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(
     "An unexpected error occurred while processing the image."
     )        
+
+
 
 async def voice_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     telegram_id = update.message.from_user.id
