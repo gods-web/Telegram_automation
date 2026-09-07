@@ -39,7 +39,7 @@ main_keyboard = ReplyKeyboardMarkup(
     resize_keyboard=True,
 
 ) 
- 
+
 print("Bot started successfully!")
 
 
@@ -74,7 +74,7 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if user_message == "💬 Feedback":
             context.user_data["awaiting_feedback"] = True
             await update.message.reply_text(
-                "Thank you for your feedback! Please how can you rate our service?"
+                "Thank you for your feedback! Please how can you rate our service?\n👍 Good\n👎 Bad\n please use any of those emojis to express your opinion."
             )
             return
     if user_message == "👍 Good":
@@ -82,17 +82,38 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(
             "Thank you for your positive feedback! We appreciate it."
         )
+        await update.message.reply_text("what do you like about our service?")
+
         return
+    
     if user_message == "👎 Bad":
         context.user_data["feedback_rating"] = "👎 Bad"
         await update.message.reply_text(
             "Thank you for your feedback! We will work to improve our service."
+        ) 
+        await update.message.reply_text(
+            "Please what is the issue you are facing?"
         )
         return
-    # context.user_data["awaiting_feedback"] = "👍 Good"
-    # context.user_data["feedback_rating"] = "👎 Bad"
-    
 
+    if user_message == "ℹ️ About":
+        await update.message.reply_text(
+            "Nexi AI is a virtual assistant designed to help you with various tasks and provide information. It can answer questions, provide recommendations, and assist with a wide range of topics. How can I assist you today?"
+        )
+        return
+
+    if user_message == "🆘 Help":
+        await update.message.reply_text(
+            "I'm here to help! You can ask me questions, request information, or provide feedback. How can I assist you today?"
+        )
+        return
+
+    if user_message == "⚙️ Menu":
+        await update.message.reply_text(
+            "Here are some options you can choose from:\n\n💬 Feedback: Provide feedback on our service.\nℹ️ About: Learn more about Nexi AI.\n🆘 Help: Get assistance and support.\n⚙️ Menu: View the main menu options."
+        )
+        return
+    
     try:
         response = client.models.generate_content(
             model="gemini-3.5-flash-lite",
@@ -101,7 +122,7 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         if "your name" in user_message.lower():
             await update.message.reply_text(
-            "My name is Nexi AI!🤖 I am a virtual assistant designed to help you with various tasks and provide information. How can I assist you today?"
+            "My name is Nexi AI ! 🤖 I am a virtual assistant designed to help you with various tasks and provide information. How can I assist you today?"
         )
             return
 
@@ -162,7 +183,7 @@ async def photo_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         print("Image converted")
 
-        print("Sending to Gemini...")
+        print("Sending to Nexi...")
 
         response = client.models.generate_content(
             model="gemini-3.5-flash-lite",
@@ -170,7 +191,7 @@ async def photo_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         ]
     )
 
-        print("Gemini finished")
+        print("Nexi AI finished")
 
         await update.message.reply_text(response.text)
 
@@ -179,8 +200,6 @@ async def photo_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(
     "An unexpected error occurred while processing the image."
     )        
-
-
 
 async def voice_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     telegram_id = update.message.from_user.id
@@ -201,7 +220,7 @@ async def voice_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         None
     )
     
-    status_message = await update.message.reply_text("analyzing response...")
+    status_message = await update.message.reply_text("Nexi, analyzing response...")
     time.sleep(1)
     await status_message.delete()
     
@@ -221,7 +240,7 @@ async def voice_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
             print("Voice note converted")
     
-            print("Sending to Gemini...")
+            print("Sending to Nexi...")
     
             response = client.models.generate_content(
                 model="gemini-3.5-flash-lite",
@@ -232,7 +251,7 @@ async def voice_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             
         )
     
-            print("Gemini finished")
+            print("Nexi finished")
 
             await update.message.reply_text(response.text)
 
