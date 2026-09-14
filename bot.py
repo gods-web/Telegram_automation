@@ -10,6 +10,8 @@ from google import genai
 import os
 import time
 
+from tts import generate_audio
+
 
 load_dotenv()
 
@@ -27,12 +29,17 @@ os.makedirs(VOICE_DIR, exist_ok=True)
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("Hello! I am Nexi AI \n How can I assist you today?",
-                                    reply_markup=main_keyboard
-                                    )
+    welcome_text = "Hello! 👋 I'm Nexi AI, your intelligent virtual assistant.\nIt's lovely to meet you! I'm here to help you find information, answer your questions, and make your tasks a little easier.\nSo, what would you like us to work on today? 🤖✨"
+    await update.message.reply_text(welcome_text, 
+                                reply_markup=main_keyboard
+                                )
 
+    await generate_audio(welcome_text)
 
-
+    await update.message.reply_voice(voice=open("output.mp3", "rb")
+                                     )
+    
+                                
 async def feedback_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     telegram_id = update.effective_user.id
 
@@ -166,12 +173,26 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Help
     if user_message == "🆘 Help":
         await update.message.reply_text(
-            "I'm here to help! You can ask questions, request information, "
-            "or provide feedback."
+            """🆘 Need some help?
+            "I'm Nexi AI, and I'm here to assist you."
+
+            You can:
+            • 💬 Ask me questions or start a conversation
+            • 📚 Ask me to explain a topic
+            • 💡 Ask for ideas or suggestions
+            • 🔎 Ask me to help you find information
+            • 📝 Ask me to write, rewrite, or improve text
+
+            Just type your request in the chat and I'll do my best to help.
+
+            If you're not sure what to ask, simply say:
+            "Hello Nexi, what can you help me with?"""
+            
         )
         return
 
     # Menu
+
     if user_message == "⚙️ Menu":
         await update.message.reply_text(
             "Here are some options:\n\n"
@@ -209,27 +230,20 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             model="gemini-3.5-flash-lite",
             contents=conversation
         )
-
-        if "your name" in user_message.lower():
-            await update.message.reply_text(
-                "My name is Nexi AI! 🤖 I am a virtual assistant designed "
-                "to help you with various tasks and provide information."
-            )
-
-        if "never say" in user_message.lower():
-            await update.message.reply_text(
-                "I will never say that! I am  a large language model trained by google." \
-                "i am here to assist you with your questions and provide information to the best of my abilities."
-            )
-
-        if "hey nexi" in user_message.lower():
-            await update.message.reply_text(
-                "Hey! What's up? What is on your mind today?"
-            )
-
         bot_response = response.text
 
+        if "your name" in user_message.lower() or "who are you" in user_message.lower():
+            bot_response = (
+                "I'm Nexi AI! 🤖 I'm your virtual assistant, here to answer "
+                "your questions, explain things, help with tasks, share ideas, "
+                "and have useful conversations with you."
+            )
+
+        elif "hey nexi" in user_message.lower():
+            bot_response = "Hey! 👋 What's up? What can I help you with today?"
+
         await update.message.reply_text(bot_response)
+
 
         save_message(
             telegram_id,
@@ -355,7 +369,6 @@ async def voice_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             print("Nexi finished")
 
             await update.message.reply_text(response.text)
-
 
 
     except ServerError:
