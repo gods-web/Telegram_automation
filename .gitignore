@@ -5,3 +5,8 @@ messages.db
 *.db
 .vscode/
 test_model.py
+messages.db
+test_model.py
+users.py
+file_voice.py
+output.mp3
