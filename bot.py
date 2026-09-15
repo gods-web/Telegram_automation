@@ -3,13 +3,12 @@ from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 from dotenv import load_dotenv
 from google.genai import types
 from telegram.ext import MessageHandler, filters
-from database import admin_get_feedback, create_table, save_message, save_feedback
+from database import admin_get_feedback, create_table, save_message, save_feedback,save_user,get_user
 from database import get_chat_history
 from google.genai.errors import ServerError
 from google import genai
 import os
 import time
-
 from tts import generate_audio
 
 
@@ -26,10 +25,22 @@ VOICE_DIR = "downloads/voice"
 os.makedirs(PHOTO_DIR, exist_ok=True)
 os.makedirs(VOICE_DIR, exist_ok=True)
 
-
+# Admin feedback command to view all feedback messages from users. Only accessible by the admin with the specified ADMIN_ID.
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    welcome_text = "Hello! 👋 I'm Nexi AI, your intelligent virtual assistant.\nIt's lovely to meet you! I'm here to help you find information, answer your questions, and make your tasks a little easier.\nSo, what would you like us to work on today? 🤖✨"
+    telegram_id = update.effective_user.id
+    first_name = update.effective_user.first_name
+    username = update.effective_user.username
+
+    # Save user information to the database
+    save_user(telegram_id, first_name, username)
+
+    welcome_text = (
+    f"Hello {first_name}! 👋 I'm Nexi AI, your intelligent virtual assistant.\n"
+    "It's lovely to meet you! I'm here to help you find information, "
+    "answer your questions, and make your tasks a little easier.\n"
+    "So, what would you like us to work on today? 🤖✨"
+)
     await update.message.reply_text(welcome_text, 
                                 reply_markup=main_keyboard
                                 )
@@ -91,6 +102,9 @@ async def feedback_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await update.message.reply_text(response)
 
+# Handler for the /feedback command to allow the admin to view feedback messages.
+# and inline keyboard for feedback, about, help, and menu options.
+
 app = ApplicationBuilder().token(BOT_TOKEN).build()
 
 main_keyboard = ReplyKeyboardMarkup(
@@ -103,6 +117,8 @@ main_keyboard = ReplyKeyboardMarkup(
 ) 
 
 print("Bot started successfully!")
+
+app.add_handler(CommandHandler("feedback", feedback_command))
 
 
 async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -192,7 +208,6 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     # Menu
-
     if user_message == "⚙️ Menu":
         await update.message.reply_text(
             "Here are some options:\n\n"
@@ -242,6 +257,12 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         elif "hey nexi" in user_message.lower():
             bot_response = "Hey! 👋 What's up? What can I help you with today?"
 
+       # Respond when a user asks who created Nexi AI
+        elif "who created you" in user_message.lower() or "who made you" in user_message.lower():
+            bot_response = (
+                "I was created by Godswill, a developer and AI enthusiast. "
+                "I was designed to be your helpful virtual assistant!"
+            )
         await update.message.reply_text(bot_response)
 
 
@@ -258,6 +279,9 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(
             "Nexi server is busy at the moment. Please try again in a few seconds."
         )
+
+#This is the for photo handler that receives a photo from the user, saves it, and sends it to Nexi AI for analysis. The response from Nexi AI is then sent back to the user.
+
 
 async def photo_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     telegram_id = update.message.from_user.id
@@ -314,7 +338,9 @@ async def photo_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         print("ERROR:", e)
         await update.message.reply_text(
     "An unexpected error occurred while processing the image."
-    )        
+    )  
+
+#This is the for voice handler that receives a voice message from the user, saves it, and sends it to Nexi AI for analysis. The response from Nexi AI is then sent back to the user. 
 
 async def voice_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     telegram_id = update.message.from_user.id
@@ -381,8 +407,9 @@ async def voice_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
             await update.message.reply_text(
             "An unexpected error occurred while processing the voice message."
-            ) 
+            )
 
+#This is the main part of the bot that sets up the command handlers and message handlers for the bot. It includes handlers for the /start command, /feedback command, text messages, photo messages, and voice messages.
 
 app.add_handler(CommandHandler("start", start))
 app.add_handler(CommandHandler("feedback", feedback_command))
