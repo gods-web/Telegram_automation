@@ -4,7 +4,6 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-
 def get_connection():
     return psycopg2.connect(
         host=os.getenv("DB_HOST"),
@@ -31,6 +30,7 @@ def create_table():
             telegram_id BIGINT NOT NULL,
             message_from VARCHAR(20),
             message_type VARCHAR(50),
+            username VARCHAR(50),
             file_id TEXT,
             file_path TEXT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -38,9 +38,55 @@ def create_table():
         )
     """)
 
+    # Stores information about each Telegram user
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS users (
+            id SERIAL PRIMARY KEY,
+            telegram_id BIGINT UNIQUE NOT NULL,
+            first_name VARCHAR(100),
+            username VARCHAR(100),
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+
     conn.commit()
     cursor.close()
     conn.close()
+
+def save_user(telegram_id, first_name, username):
+    # Saves a new Telegram user in the users table
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        INSERT INTO users (telegram_id, first_name, username)
+        VALUES (%s, %s, %s)
+        ON CONFLICT (telegram_id) DO UPDATE SET first_name = EXCLUDED.first_name, 
+        username = EXCLUDED.username
+    """, 
+    (telegram_id, first_name, username))
+
+    conn.commit()
+    cursor.close()
+    conn.close()
+
+def get_user(telegram_id):
+    # Retrieves a user's saved information from the database
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT first_name, username
+        FROM users
+        WHERE telegram_id = %s
+    """, (telegram_id,))
+
+    user = cursor.fetchone()
+
+    cursor.close()
+    conn.close()
+
+    return user
 
 def save_message(
     telegram_id,
