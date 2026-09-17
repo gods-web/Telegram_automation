@@ -12,13 +12,6 @@ def get_connection():
         password=os.getenv("DB_PASSWORD")
     )
 
-def get_connection():
-    return psycopg2.connect(
-        host="localhost",
-        database="nexi_bot",
-        user="postgres",
-        password="7900"
-    )
 
 def create_table():
     conn = get_connection()
