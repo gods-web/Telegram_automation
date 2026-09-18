@@ -449,3 +449,6 @@ app.add_handler(MessageHandler(filters.VOICE, voice_handler))
 
 create_table()
 
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(web_app, host="0.0.0.0", port=8000)
