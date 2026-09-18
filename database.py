@@ -46,6 +46,24 @@ def create_table():
     cursor.close()
     conn.close()
 
+
+def get_today_photo_count(telegram_id):
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT COUNT(*)
+        FROM messages
+        WHERE telegram_id = %s AND message_type = 'photo' AND created_at::date = CURRENT_DATE
+    """, (telegram_id,))
+
+    count = cursor.fetchone()[0]
+
+    cursor.close()
+    conn.close()
+
+    return count
+
 def save_user(telegram_id, first_name, username):
     # Saves a new Telegram user in the users table
     conn = get_connection()
