@@ -3,16 +3,36 @@ from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 from dotenv import load_dotenv
 from google.genai import types
 from telegram.ext import MessageHandler, filters
-from database import admin_get_feedback, create_table, save_message, save_feedback,save_user,get_user
+from database import admin_get_feedback, create_table, save_message, save_feedback,save_user,get_user,get_today_photo_count
 from database import get_chat_history
 from google.genai.errors import ServerError
 from google import genai
 import os
 import time
 from tts import generate_audio
+from fastapi import FastAPI, Request, Response
+from contextlib import asynccontextmanager
+from http import HTTPStatus
 
 
 load_dotenv()
+@asynccontextmanager
+async def lifespan(web_app: FastAPI):
+    await app.initialize()
+    await app.start()
+
+    yield
+    await app.stop()
+    await app.shutdown()
+web_app = FastAPI(lifespan=lifespan)
+
+@web_app.post("/webhook")
+async def webhook(request: Request):
+    data = await request.json()
+    update = Update.de_json(data, app.bot)
+    await app.process_update(update)
+    print(data)
+    return Response(status_code=HTTPStatus.OK)
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
@@ -287,6 +307,15 @@ async def photo_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     telegram_id = update.message.from_user.id
     message_from = update.message.from_user.username
 
+    if telegram_id != int(os.getenv("ADMIN_ID")):
+        photo_count = get_today_photo_count(telegram_id)
+        if photo_count >= 3:
+            await update.message.reply_text(
+                "You have reached the daily limit of 3 photos. "
+                "Please try again tomorrow."
+            )
+            return
+
     photo_file = await update.message.photo[-1].get_file()
     file_id = photo_file.file_id
 
@@ -417,5 +446,6 @@ app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, message_handler)
 app.add_handler(MessageHandler(filters.PHOTO, photo_handler))
 app.add_handler(MessageHandler(filters.VOICE, voice_handler))
 
+
 create_table()
-app.run_polling()
+
