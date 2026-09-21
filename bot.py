@@ -8,7 +8,7 @@ from database import get_chat_history
 from google.genai.errors import ServerError
 from google import genai
 import os
-import time
+import asyncio
 from tts import generate_audio
 from fastapi import FastAPI, Request, Response
 from contextlib import asynccontextmanager
@@ -17,26 +17,44 @@ from http import HTTPStatus
 
 load_dotenv()
 @asynccontextmanager
-async def lifespan(web_app: FastAPI):
+async def lifespan(app_lifespan: FastAPI):
     await app.initialize()
+
+    await app.bot.set_webhook(
+        url=f"{WEBHOOK_URL}/webhook",
+        allowed_updates=Update.ALL_TYPES
+    )
+
     await app.start()
 
     yield
+
     await app.stop()
     await app.shutdown()
+
+
 web_app = FastAPI(lifespan=lifespan)
+
+
+@web_app.get("/")
+async def health_check():
+    return {"status": "Nexi AI is running"}
+
 
 @web_app.post("/webhook")
 async def webhook(request: Request):
     data = await request.json()
     update = Update.de_json(data, app.bot)
     await app.process_update(update)
+
     print(data)
+
     return Response(status_code=HTTPStatus.OK)
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 ADMIN_ID = int(os.getenv("ADMIN_ID"))
+WEBHOOK_URL = os.getenv("WEBHOOK_URL")
 
 client = genai.Client(api_key=GEMINI_API_KEY)
 
@@ -125,7 +143,7 @@ async def feedback_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # Handler for the /feedback command to allow the admin to view feedback messages.
 # and inline keyboard for feedback, about, help, and menu options.
 
-app = ApplicationBuilder().token(BOT_TOKEN).build()
+app = ApplicationBuilder().token(BOT_TOKEN).updater(None).build()
 
 main_keyboard = ReplyKeyboardMarkup(
     [
@@ -137,8 +155,6 @@ main_keyboard = ReplyKeyboardMarkup(
 ) 
 
 print("Bot started successfully!")
-
-app.add_handler(CommandHandler("feedback", feedback_command))
 
 
 async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -178,7 +194,7 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # Good feedback
     if user_message == "👍 Good":
-        context.user_data["feedback_rating"] = "👍 Good"
+        context.user_data["feedback_rating"] = 1
         context.user_data["awaiting_feedback"] = True
 
         await update.message.reply_text(
@@ -189,7 +205,7 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # Bad feedback
     if user_message == "👎 Bad":
-        context.user_data["feedback_rating"] = "👎 Bad"
+        context.user_data["feedback_rating"] = 0
         context.user_data["awaiting_feedback"] = True
 
         await update.message.reply_text(
@@ -333,7 +349,7 @@ async def photo_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
     status_message = await update.message.reply_text("📷 Photo received. Analyzing...")
-    time.sleep(3)
+    await asyncio.sleep(3)
     await status_message.delete()
 
     try:
@@ -391,7 +407,7 @@ async def voice_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     
     status_message = await update.message.reply_text("Nexi, analyzing response...")
-    time.sleep(1)
+    await asyncio.sleep(1)
     await status_message.delete()
     
     try:
