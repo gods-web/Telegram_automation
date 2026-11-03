@@ -1,3 +1,6 @@
+from turtle import update
+from urllib.parse import quote
+
 from telegram import ReplyKeyboardMarkup, Update
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 from dotenv import load_dotenv
@@ -9,8 +12,9 @@ from google.genai.errors import ServerError
 from google import genai
 import os
 import asyncio
+from test_image import POLLINATIONS_API_KEY
 from tts import generate_audio
-from fastapi import FastAPI, Request, Response
+from fastapi import FastAPI, Request, Response, requests
 from contextlib import asynccontextmanager
 from http import HTTPStatus
 
@@ -155,6 +159,73 @@ main_keyboard = ReplyKeyboardMarkup(
 ) 
 
 print("Bot started successfully!")
+
+
+async def image_generation_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    telegram_id = update.message.from_user.id
+    user_message = update.message.text
+
+    prompt = user_message[len("/generate_image"):].strip()
+
+    if not prompt:
+        await update.message.reply_text(
+            "Please provide a prompt for image generation. "
+            "Usage: /generate_image <your prompt>"
+        )
+        return
+
+    status_message = await update.message.reply_text(
+        "Nexi is sketching your image... ✏️"
+    )
+
+    try:
+        url = (
+            "https://gen.pollinations.ai/image/"
+            + quote(prompt)
+            + "?model=black-forest-labs/flux.1-schnell"
+        )
+
+        response = await asyncio.to_thread(
+            requests.get,
+            url,
+            headers={"Authorization": f"Bearer {POLLINATIONS_API_KEY}"},
+            timeout=120
+        )
+
+        if (
+            response.status_code == 200
+            and response.headers.get("Content-Type", "").startswith("image/")
+        ):
+            os.makedirs(PHOTO_DIR, exist_ok=True)
+
+            image_path = os.path.join(
+                PHOTO_DIR, f"{telegram_id}_generated.png"
+            )
+
+            with open(image_path, "wb") as image_file:
+                image_file.write(response.content)
+
+            await status_message.edit_text(
+                "Nexi has finished creating your image! 🎨"
+            )
+
+            with open(image_path, "rb") as image_file:
+                await update.message.reply_photo(photo=image_file)
+
+            await asyncio.sleep(2)
+            await status_message.delete()
+
+        else:
+            await status_message.edit_text(
+                f"Image generation failed. Status code: {response.status_code}"
+            )
+
+    except Exception as e:
+        print("IMAGE GENERATION ERROR:", e)
+
+        await status_message.edit_text(
+            "Sorry! Nexi encountered an error while generating your image."
+        )
 
 
 async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -460,6 +531,7 @@ app.add_handler(CommandHandler("start", start))
 app.add_handler(CommandHandler("feedback", feedback_command))
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, message_handler))
 app.add_handler(MessageHandler(filters.PHOTO, photo_handler))
+app.add_handler(CommandHandler("generate_image", image_generation_handler))
 app.add_handler(MessageHandler(filters.VOICE, voice_handler))
 
 
