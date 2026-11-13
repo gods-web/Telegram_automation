@@ -1,7 +1,7 @@
 from turtle import update
 from urllib.parse import quote
-
 from telegram import ReplyKeyboardMarkup, Update
+from telegram.error import NetworkError
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 from dotenv import load_dotenv
 from google.genai import types
@@ -19,15 +19,17 @@ from contextlib import asynccontextmanager
 from http import HTTPStatus
 
 
-load_dotenv()
 @asynccontextmanager
 async def lifespan(app_lifespan: FastAPI):
     await app.initialize()
 
-    await app.bot.set_webhook(
-        url=f"{WEBHOOK_URL}/webhook",
-        allowed_updates=Update.ALL_TYPES
-    )
+    environment = os.getenv("ENVIRONMENT", "local")
+
+    if environment == "production":
+        await app.bot.set_webhook(
+            url=f"{WEBHOOK_URL}/webhook",
+            allowed_updates=Update.ALL_TYPES
+        )
 
     await app.start()
 
@@ -35,7 +37,6 @@ async def lifespan(app_lifespan: FastAPI):
 
     await app.stop()
     await app.shutdown()
-
 
 web_app = FastAPI(lifespan=lifespan)
 
@@ -86,6 +87,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(welcome_text, 
                                 reply_markup=main_keyboard
                                 )
+    
 
     await generate_audio(welcome_text)
 
@@ -215,6 +217,16 @@ async def image_generation_handler(update: Update, context: ContextTypes.DEFAULT
             await asyncio.sleep(2)
             await status_message.delete()
 
+            image_count = get_today_photo_count(telegram_id)
+            if image_count >= 3:
+                        await update.message.reply_text(
+                            "You have reached the daily limit of 3 image generation!. "
+                            "Please try again tomorrow."
+                        )
+                        return
+            
+            image_count = await update.message.photo[-1].get_file() 
+
         else:
             await status_message.edit_text(
                 f"Image generation failed. Status code: {response.status_code}"
@@ -252,6 +264,7 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     # Feedback button
+
     if user_message == "💬 Feedback":
         context.user_data["awaiting_feedback"] = True
 
@@ -289,7 +302,7 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if user_message == "ℹ️ About":
         await update.message.reply_text(
             "Nexi AI is a virtual assistant designed to help you "
-            "with various tasks and provide information."
+            "with various tasks and provide useful information."
         )
         return
 
@@ -356,7 +369,7 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         if "your name" in user_message.lower() or "who are you" in user_message.lower():
             bot_response = (
-                "I'm Nexi AI! 🤖 I'm your virtual assistant, here to answer "
+                "I'm Nexi AI! 🤖 I'm your virtual assistant, i'm here to answer "
                 "your questions, explain things, help with tasks, share ideas, "
                 "and have useful conversations with you."
             )
@@ -520,7 +533,9 @@ async def voice_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception as e:
             print("ERROR:", e)
 
-    
+    except NetworkError:
+            await update.message.reply_text("📡❌CONNECTION ERROR\n" "Network was interrupted. Please check your internet connection and try again.")
+        
             await update.message.reply_text(
             "An unexpected error occurred while processing the voice message."
             )
